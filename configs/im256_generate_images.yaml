@@ -1,0 +1,80 @@
+ 
+
+label_dim: 1000 
+resolution: 32 #latent resolution
+channels: 4
+
+dataloader:
+  pin_memory: true
+  num_workers: 1
+  prefetch_factor: 2
+
+encoder:
+  class_name: training.encoders.StabilityVAEEncoder
+  vae_name: stabilityai/sd-vae-ft-ema
+  final_std: 0.5
+  raw_mean: [ 0.86488,    -0.27787343,  0.21616915,  0.3738409 ]
+  raw_std: [4.85503674, 5.31922414, 3.93725398 , 3.9870003 ]  
+  use_fp16: true 
+  
+
+network:
+  class_name: training.preconds.IMMPrecond 
+   
+  model_type: "DiT_XL_2"  
+  s_embed: true 
+
+  noise_schedule: fm
+
+  #sample function 
+  f_type: euler_fm
+  temb_type: stride 
+  time_scale: 1000
+
+  sigma_data: 0.5
+
+  eps: 0.
+  T: 0.994
+
+
+
+sampling: 
+ 
+  1_steps_cfg1.5_pushforward_uniform:
+    name: pushforward_generator_fn
+    discretization: uniform
+    num_steps: 1
+    cfg_scale: 1.5
+
+     
+  2_steps_cfg1.5_pushforward_uniform:
+    name: pushforward_generator_fn 
+    discretization: uniform
+    num_steps: 2
+    cfg_scale: 1.5
+    
+  4_steps_cfg1.5_pushforward_uniform:
+    name: pushforward_generator_fn 
+    discretization: uniform
+    num_steps: 4 
+    cfg_scale: 1.5
+  
+  8_steps_cfg1.5_pushforward_uniform:
+    name: pushforward_generator_fn 
+    discretization: uniform
+    num_steps: 8 
+    cfg_scale: 1.5
+     
+  
+
+eval:
+  seed: 42
+  batch_size: 256
+  cudnn_benchmark: true 
+  resume: null
+
+
+hydra:  
+  output_subdir: null  
+  run:  
+    dir: .

@@ -1,0 +1,54 @@
+ 
+label_dim: 0 # unconditional
+resolution: 32 #latent resolution
+channels: 3
+
+encoder:
+  class_name: training.encoders.StandardRGBEncoder
+ 
+
+network:
+  class_name: training.preconds.IMMPrecond
+  #ddpmpp
+  model_type: "SongUNet"
+  embedding_type: "positional" 
+  encoder_type: "standard"
+  decoder_type: "standard"
+  channel_mult_noise: 1
+  resample_filter: [1, 1]
+  model_channels: 128
+  channel_mult: [2, 2, 2]
+  s_embed: true 
+  dropout: 0.2 
+ 
+  noise_schedule: fm
+  
+  f_type: simple_edm
+  temb_type: identity 
+  time_scale: 1000
+ 
+
+  eps: 0.006
+  T: 0.994
+
+
+sampling:
+  1_step:
+    name: pushforward_generator_fn 
+    mid_nt: null
+
+  2_steps:
+    name: pushforward_generator_fn 
+    mid_nt: [1.4]
+  
+eval:
+  seed: 42
+  batch_size: 256
+  cudnn_benchmark: true 
+  resume: null
+
+
+hydra:  
+  output_subdir: null  
+  run:  
+    dir: .
