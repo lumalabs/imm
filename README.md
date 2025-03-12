@@ -24,7 +24,7 @@ Official Implementation of [Inductive Moment Matching](https://arxiv.org/abs/250
 </div>
 <div align="center">
 <a href="https://arxiv.org/abs/2503.07565">[Paper]</a>
-<a href="https://lumalabs.ai/news/inductive_moment_matching">[Blog]</a> 
+<a href="https://lumalabs.ai/news/imm">[Blog]</a> 
 </div>
 </br>
 
