@@ -1,0 +1,160 @@
+ 
+name: imagenet256_a2b4k12_mingap0.0001_fp16
+
+logger:
+  project: imm_imagenet256
+  api_key: YOUR_API_KEY
+  entity: YOUR_ENTITY 
+
+outputdir: ./outputs
+dataset:
+  class_name: "training.dataset.ImageFolderDataset"
+  path: YOUR_DATASET_PATH
+  use_labels: true #this will dictate cond=true or false
+  xflip: false
+  cache: true
+
+augment: null 
+
+dataloader:
+  pin_memory: true
+  num_workers: 1
+  prefetch_factor: 2
+
+encoder:
+  class_name: training.encoders.StabilityVAEEncoder
+  vae_name: stabilityai/sd-vae-ft-ema
+  final_std: 0.5
+  raw_mean: [ 0.86488,    -0.27787343,  0.21616915,  0.3738409 ]
+  raw_std: [4.85503674, 5.31922414, 3.93725398 , 3.9870003 ]  
+  use_fp16: true 
+
+network:
+  class_name: training.preconds.IMMPrecond 
+   
+  model_type: "DiT_XL_2"  
+  s_embed: true 
+ 
+  noise_schedule: fm
+
+  #sample function 
+  f_type: euler_fm
+  temb_type: stride 
+  time_scale: 1000
+
+  sigma_data: 0.5
+
+  eps: 0.
+  T: 0.994
+ 
+  mixed_precision: fp16
+
+
+loss:
+  class_name: training.loss.IMMLoss
+  #kernel 
+  sigma: 1  
+   
+  sample_t_mode: uniform 
+   
+  matrix_size: 4
+
+  sample_repeat: 1 
+  
+
+  a: 2
+  b: 4
+  k: 12
+ 
+  label_dropout: 0.1
+  min_tr_gap: 0.0001
+ 
+  
+optimizer:
+  class_name: torch.optim.AdamW
+  lr: 1e-4
+  betas: [0.9, 0.999]
+  eps: 1e-8
+  weight_decay: 0.
+  
+
+training:
+  total_ticks: 100_000
+  ema_halflife_kimg: null
+  ema_beta: 0.9999
+ 
+  batch_size:  4096
+  batch_gpu: null
+ 
+  cudnn_benchmark: true
+  enable_tf32: false 
+ 
+  kimg_per_tick:  409.6
+  snapshot_ticks: 1000
+  state_dump_ticks: 1000
+  ckpt_ticks: 50
+  sample_ticks: 50
+  eval_ticks: 500
+ 
+  #for eval 
+  metrics: [fid50k_full,]
+
+  seed: 0
+
+  transfer: null
+
+  # resume
+  resume: null
+  resume_tick: null
+ 
+
+  num_samples: 16
+  
+ 
+
+sampling: 
+ 
+  1_steps_cfg1.5_pushforward_uniform:
+    name: pushforward_generator_fn
+    discretization: uniform
+    num_steps: 1
+    cfg_scale: 1.5
+
+     
+  2_steps_cfg1.5_pushforward_uniform:
+    name: pushforward_generator_fn 
+    discretization: uniform
+    num_steps: 2
+    cfg_scale: 1.5
+    
+  4_steps_cfg1.5_pushforward_uniform:
+    name: pushforward_generator_fn 
+    discretization: uniform
+    num_steps: 4 
+    cfg_scale: 1.5
+  
+  8_steps_cfg1.5_pushforward_uniform:
+    name: pushforward_generator_fn 
+    discretization: uniform
+    num_steps: 8 
+    cfg_scale: 1.5
+     
+  
+eval:
+  seed: 42
+  cudnn_benchmark: true
+  batch_size: 128
+  batch_gpu: null 
+  metrics: [fid50k_full,]
+  resume: null
+  detector_url: 'https://api.ngc.nvidia.com/v2/models/nvidia/research/stylegan3/versions/1/files/metrics/inception-2015-12-05.pkl'
+  detector_kwargs: 
+    return_features: True
+
+  ref_stats: YOUR_PATH/dataset-refs/img256.pkl
+
+
+hydra:  
+  output_subdir: null  
+  run:  
+    dir: .

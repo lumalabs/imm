@@ -1,0 +1,140 @@
+ 
+name: cifar10_a1b4k15
+logger:
+  project: imm_cifar10
+  api_key: YOUR_API_KEY
+  entity: YOUR_ENTITY 
+  
+outputdir:  ./outputs
+dataset:
+  class_name: "training.dataset.ImageFolderDataset"
+  path:  YOUR_DATASET_PATH
+  use_labels: false #this will dictate cond=true or false
+  xflip: true
+  cache: true
+
+# augment: null 
+augment:
+  class_name: "training.augment.AugmentPipe"
+  p: 0.12
+  xflip: 1e8
+  yflip: 1
+  scale: 1
+  rotate_frac: 1
+  aniso: 1
+  translate_frac: 1
+
+
+dataloader:
+  pin_memory: true
+  num_workers: 1
+  prefetch_factor: 2
+
+encoder:
+  class_name: training.encoders.StandardRGBEncoder
+
+network:
+  class_name: training.preconds.IMMPrecond
+  #ddpmpp
+  model_type: "SongUNet"
+  embedding_type: "positional" 
+  encoder_type: "standard"
+  decoder_type: "standard"
+  channel_mult_noise: 1
+  resample_filter: [1, 1]
+  model_channels: 128
+  channel_mult: [2, 2, 2]
+  s_embed: true 
+  dropout: 0.2 
+ 
+  noise_schedule: fm
+  
+  f_type: simple_edm
+  temb_type: identity 
+  time_scale: 1000
+ 
+
+  eps: 0.006
+  T: 0.994
+
+
+
+loss:
+  class_name: training.loss.IMMLoss
+  #kernel 
+  sigma: 1  
+   
+  sample_t_mode: uniform 
+   
+  matrix_size: 4
+
+  sample_repeat: 1 
+  
+
+  a: 1
+  b: 4
+  k: 15
+ 
+
+optimizer:
+  class_name: torch.optim.RAdam
+  lr: 1e-4
+  betas: [0.9, 0.999]
+  eps: 1e-8  
+
+training:
+  total_ticks: 10000
+  ema_halflife_kimg: null
+  ema_beta: 0.9999
+ 
+  batch_size: 4096
+  batch_gpu: null
+ 
+  cudnn_benchmark: true
+  enable_tf32: true
+ 
+  kimg_per_tick: 409.6
+  snapshot_ticks: 500
+  state_dump_ticks: 500
+  ckpt_ticks: 50
+  sample_ticks: 50
+  eval_ticks: 200
+ 
+
+  #for eval 
+  metrics: [fid50k_full,]
+
+  seed: 0
+
+  transfer: null
+
+  # resume
+  resume: null
+  resume_tick: null
+ 
+  
+
+sampling:
+  1_step:
+    name: pushforward_generator_fn
+    mid_nt: null
+  
+  2_step:
+    name: pushforward_generator_fn
+    mid_nt: [1.4] 
+ 
+
+eval:
+  seed: 42
+  cudnn_benchmark: true
+  batch_size: 128
+  batch_gpu: null 
+  metrics: [fid50k_full,]
+  detector_url: 'https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada-pytorch/pretrained/metrics/inception-2015-12-05.pt' 
+  resume: null
+
+
+hydra:  
+  output_subdir: null  
+  run:  
+    dir: .

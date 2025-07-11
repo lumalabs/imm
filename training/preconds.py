@@ -307,3 +307,112 @@ class IMMPrecond(torch.nn.Module):
             raise NotImplementedError
 
         return F_x
+
+
+
+    ######################################################### for training
+
+
+    def get_logsnr_prime(self, t):
+        if self.noise_schedule == "vp_cosine":
+            return (
+                -1
+                * torch.pi
+                / (torch.sin(t * torch.pi * 0.5) * torch.cos(t * torch.pi * 0.5))
+            )
+ 
+        elif self.noise_schedule == "fm":
+            return -2 * (1 / (1 - t) / t)
+
+            
+    def get_kernel_weight(
+        self, t,  s, a=1,   b=0, 
+    ): 
+             
+        logsnr_t = self.get_logsnr(t)
+
+        alpha_t, sigma_t = self.get_alpha_sigma(t) 
+        alpha_s, sigma_s = self.get_alpha_sigma(s) 
+         
+
+        if self.f_type == 'identity':
+            w =   (sigma_t / (alpha_s * sigma_t - sigma_s * alpha_t )).abs()
+        elif self.f_type == 'simple_edm':
+            w =  (alpha_t**2 + sigma_t**2).sqrt() / (alpha_s * sigma_t - alpha_t * sigma_s).abs() / self.sigma_data
+        elif self.f_type == 'euler_fm':
+            w = 1 / (t - s).abs() / self.sigma_data
+        else:
+            raise NotImplementedError 
+
+
+        neg_dlogsnr_dt = - self.get_logsnr_prime(t)
+                
+        wout =  alpha_t ** a / (alpha_t**2 + sigma_t**2)  * 0.5 * neg_dlogsnr_dt * (b - logsnr_t).sigmoid()
+         
+        return   w, wout
+
+    def sample_eta_t(
+        self,
+        batch_size,
+        device,
+        log_low=None,
+        log_high=None,
+        low=None,
+        high=None,
+        sample_mode="lognormal",
+        P_mean=-1.1,
+        P_std=2.0,
+        **kwargs,
+    ):
+        if sample_mode == "lognormal":
+
+            log_low = log_low if log_low is not None else -float("inf")
+            log_low = torch.as_tensor(log_low, device=device, dtype=torch.float64)
+            if log_low.ndim == 0:
+                log_low = log_low.unsqueeze(0).expand(batch_size).reshape(-1, 1, 1, 1)
+
+            log_high = log_high if log_high is not None else float("inf")
+            log_high = torch.as_tensor(log_high, device=device, dtype=torch.float64)
+            if log_high.ndim == 0:
+                log_high = log_high.unsqueeze(0).expand(batch_size).reshape(-1, 1, 1, 1)
+            dist = torch.distributions.Normal(
+                loc=torch.full_like(log_high, P_mean),
+                scale=torch.full_like(log_high, P_std),
+            )
+
+            cdf = torch.rand([batch_size, 1, 1, 1], device=device) * (
+                dist.cdf(log_high) - dist.cdf(log_low)
+            ) + dist.cdf(log_low)
+
+            log_nt = dist.icdf(cdf)
+            nt = log_nt.exp()
+
+        elif sample_mode == "uniform":
+            if high is None:
+                high = self.nt_high
+            else:
+                high = torch.as_tensor(high, device=device, dtype=torch.float64)
+                if high.ndim == 0:
+                    high = high.unsqueeze(0).expand(batch_size).reshape(-1, 1, 1, 1)
+
+            if low is None:
+                low = self.nt_low
+            else:
+                low = torch.as_tensor(low, device=device, dtype=torch.float64)
+                if low.ndim == 0:
+                    low = low.unsqueeze(0).expand(batch_size).reshape(-1, 1, 1, 1)
+
+            high_t = self.nt_to_t(high)
+            low_t = self.nt_to_t(low)
+
+            t = (
+                torch.rand([batch_size, 1, 1, 1], device=device, dtype=torch.float64) * (high_t - low_t)
+                + low_t
+            )
+
+            log_nt = self.get_log_nt(t)
+            nt = log_nt.exp()
+        else:
+            raise ValueError(f"Unknown sample_t_mode: {sample_mode}")
+
+        return nt, log_nt
